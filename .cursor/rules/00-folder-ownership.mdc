@@ -1,0 +1,96 @@
+---
+description: Folder ownership and architecture boundaries for FlowSnap
+globs:
+alwaysApply: true
+---
+# FlowSnap folder ownership rules
+
+## Core principle
+Keep the codebase modular, explicit, and easy to navigate.
+Do not mix route code, UI code, server code, and domain logic.
+
+## Folder ownership
+
+### `app/`
+Use only for Next.js routing concerns:
+- route files
+- layouts
+- loading states
+- error states
+- route group boundaries
+
+Do not place business logic, provider logic, database access, or complex UI composition here.
+
+### `components/`
+Use for reusable presentational UI components only.
+Components should be small, composable, and mostly stateless.
+Do not put API calls, database logic, or provider-specific logic here.
+
+### `modules/`
+Use for domain and feature logic.
+Each module owns its own:
+- application logic
+- feature-specific components
+- actions
+- validation
+- hooks
+- view models
+- tests
+
+Examples:
+- modules/integrations
+- modules/widgets
+- modules/admin
+- modules/auth
+- modules/generated-audio
+
+### `server/`
+Use for server-only code:
+- Supabase admin/server clients
+- provider adapters
+- external API clients
+- encryption helpers
+- storage access
+- server services
+- server actions backend helpers
+
+Never import `server/` code into client components.
+
+### `lib/`
+Use only for small shared utilities with minimal domain knowledge.
+Do not allow `lib/` to become a dumping ground.
+If logic is domain-specific, move it into `modules/`.
+If logic is server-only, move it into `server/`.
+
+### `types/`
+Shared TypeScript types that are stable and cross-cutting.
+Prefer deriving types from schemas where possible.
+
+### `config/`
+Static configuration, constants, and declarative registry configuration.
+Do not place runtime business logic here.
+
+### `docs/`
+Project documentation, implementation notes, decisions, and product docs.
+
+## Architecture rules
+- Keep page files thin.
+- Keep provider logic isolated behind adapters.
+- Keep UI separate from data fetching and mutations.
+- Keep admin concerns separate from end-user dashboard concerns.
+- Keep iframe widget runtime separate from dashboard application UI.
+
+## Anti-patterns
+Do not:
+- put database queries in page components
+- call third-party APIs directly from client code
+- store secrets in client code
+- place large generic helpers into `lib/` without clear ownership
+- mix widget runtime code with dashboard code in the same module
+- create abstractions with no real use case
+
+## When generating code
+Before creating new files:
+1. state which folder each file belongs to
+2. explain why it belongs there
+3. keep each file focused on one responsibility
