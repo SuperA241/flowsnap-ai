@@ -1,0 +1,19 @@
+---
+description: Security rules for FlowWidgets
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Security rules
+
+- API keys must never be exposed to the client. All provider calls happen server-side only.
+- All credentials stored in the database must be encrypted with ENCRYPTION_SECRET before storage.
+- The raw decrypted secret must never be returned in a server response.
+- Admin routes must be protected before any admin feature is built.
+  Admin access is gated by checking the authenticated user's email against ADMIN_EMAIL.
+  This check must exist in middleware or the admin layout before any admin page code runs.
+- Do not store executable code in the database.
+  The server_adapter_key field maps to a registered adapter in code — it is a reference, not executable content.
+- Widget runtime pages are public by embed token only — they must not expose any user account data.
+- Row Level Security must be applied to all Supabase tables.

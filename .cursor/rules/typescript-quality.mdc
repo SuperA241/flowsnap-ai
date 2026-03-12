@@ -1,0 +1,21 @@
+---
+description: TypeScript and code quality rules for FlowWidgets
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: true
+---
+
+# TypeScript quality rules
+
+- Use strict typing throughout.
+- Never use `any` unless genuinely unavoidable — if you use it, add a comment explaining why.
+- Prefer named domain types over inline object shapes.
+- Validate all function inputs explicitly.
+- Return explicit shapes from all services — never return `any` or `unknown` without narrowing.
+- Keep functions short and single-purpose.
+- Add comments only where intent is not immediately obvious from the code.
+- Do not leave dead code.
+- Do not leave placeholder mocks unless they are clearly marked with a TODO comment.
+- Keep imports clean, sorted, and minimal.
+- Export only what is actually needed by consumers.

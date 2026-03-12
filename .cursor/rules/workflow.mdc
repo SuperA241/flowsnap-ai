@@ -1,0 +1,18 @@
+---
+description: Incremental implementation workflow for FlowWidgets
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Workflow rules
+
+- Work in small, incremental steps at all times.
+- Before making any change, state exactly which files will be created or edited.
+- Prefer creating or editing one file per step.
+- After each step, provide three things: what changed, how to test it, what the next smallest step is.
+- Do not make hidden structural changes.
+- Do not silently rename files or folders.
+- Do not refactor things that are not part of the current task.
+- Do not introduce new dependencies without asking first.
+- If you see a problem outside the current scope, note it but do not fix it without being asked.

@@ -1,0 +1,17 @@
+---
+description: UI rules for FlowWidgets
+globs:
+  - "**/*.tsx"
+alwaysApply: true
+---
+
+# UI rules
+
+- Use shadcn/ui and Tailwind consistently.
+- Keep presentation components separate from data fetching.
+- Shared UI components go in components/ui/ or components/shared/.
+- Feature-specific UI stays inside the feature folder.
+- Forms must have clear labels, validation messages, and error states.
+- Do not create large monolithic components — break them into meaningful subcomponents.
+- Do not fetch data inside presentational components.
+- Page files compose components — they do not contain rendering logic themselves.

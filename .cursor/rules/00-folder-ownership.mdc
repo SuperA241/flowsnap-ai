@@ -1,9 +1,9 @@
 ---
-description: Folder ownership and architecture boundaries for FlowSnap
+description: Folder ownership and architecture boundaries for FlowWidgets
 globs:
 alwaysApply: true
 ---
-# FlowSnap folder ownership rules
+# FlowWidgets folder ownership rules
 
 ## Core principle
 Keep the codebase modular, explicit, and easy to navigate.
@@ -26,9 +26,9 @@ Use for reusable presentational UI components only.
 Components should be small, composable, and mostly stateless.
 Do not put API calls, database logic, or provider-specific logic here.
 
-### `modules/`
+### `features/`
 Use for domain and feature logic.
-Each module owns its own:
+Each feature owns its own:
 - application logic
 - feature-specific components
 - actions
@@ -38,11 +38,12 @@ Each module owns its own:
 - tests
 
 Examples:
-- modules/integrations
-- modules/widgets
-- modules/admin
-- modules/auth
-- modules/generated-audio
+- features/integrations
+- features/widgets
+- features/admin
+- features/auth
+- features/generated-assets
+- features/widget-runtime
 
 ### `server/`
 Use for server-only code:
@@ -59,19 +60,29 @@ Never import `server/` code into client components.
 ### `lib/`
 Use only for small shared utilities with minimal domain knowledge.
 Do not allow `lib/` to become a dumping ground.
-If logic is domain-specific, move it into `modules/`.
+If logic is domain-specific, move it into `features/`.
 If logic is server-only, move it into `server/`.
 
 ### `types/`
 Shared TypeScript types that are stable and cross-cutting.
 Prefer deriving types from schemas where possible.
 
-### `config/`
-Static configuration, constants, and declarative registry configuration.
-Do not place runtime business logic here.
-
 ### `docs/`
 Project documentation, implementation notes, decisions, and product docs.
+
+### `supabase/`
+SQL migrations, seed data, and Row Level Security policy files only.
+Do not place application logic here.
+
+## Dependency direction rules
+
+These are strict. Never invert them.
+
+- `lib/` depends only on platform packages and `types/`
+- `server/` depends on `lib/`, `types/`, and provider SDKs
+- `features/` may depend on `components/`, `lib/`, `types/`, and call server actions or API routes
+- `components/` must never import from `server/`
+- `app/` composes `features/` and `components/` only — no direct server imports in page files
 
 ## Architecture rules
 - Keep page files thin.
@@ -88,6 +99,7 @@ Do not:
 - place large generic helpers into `lib/` without clear ownership
 - mix widget runtime code with dashboard code in the same module
 - create abstractions with no real use case
+- import `server/` code from `components/` or client components
 
 ## When generating code
 Before creating new files:

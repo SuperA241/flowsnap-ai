@@ -1,0 +1,47 @@
+---
+description: Integration architecture rules for FlowWidgets
+globs:
+  - "**/admin/**"
+  - "**/integrations/**"
+  - "**/server/**"
+alwaysApply: true
+---
+
+# Integration architecture rules
+
+## Boundaries
+
+- Integration definitions are platform-level objects owned by the admin.
+- Widget instances are user-level objects owned by users.
+- Credentials are stored encrypted and are never returned to the client.
+- Integration metadata, config schema, and runtime template references are stored in the database.
+- Actual execution logic lives in code at server/integrations/<provider>/adapter.ts.
+- The server_adapter_key in integration_versions is a string reference that maps to a registry entry.
+  It is never evaluated as code. It selects which adapter function to call.
+
+## What the admin can configure
+
+- Integration metadata (name, category, status, docs URL)
+- Credential storage (encrypted platform-owned or user-supplied API keys)
+- Widget config schema (which fields the widget builder exposes to the user)
+- Render template reference (which public widget component to render in the iframe)
+- Adapter selection key (which registered adapter handles execution for this version)
+
+## What the admin cannot do
+
+- Store raw executable code in the database
+- Publish integrations without review
+- Bypass the server_adapter_key registry pattern
+
+## ElevenLabs-specific rules
+
+- Do not hardcode ElevenLabs assumptions into generic integration tables, services, or platform-wide types.
+- All ElevenLabs-specific logic must live in server/integrations/elevenlabs/.
+- The registry entry for elevenlabs-sfx-v1 maps to server/integrations/elevenlabs/adapter.ts.
+
+## AI discovery policy
+
+- An AI agent may write draft ideas to admin_integration_drafts only.
+- An AI agent must never write to integrations or integration_versions directly.
+- Publishing a new integration must always require platform owner review and approval.
+- Do not build any autonomous ingestion flow in v1.

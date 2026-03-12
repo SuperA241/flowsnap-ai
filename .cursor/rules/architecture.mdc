@@ -1,0 +1,63 @@
+---
+description: Architecture and separation rules for FlowWidgets
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Architecture rules
+
+This codebase is a modular monolith.
+
+## Folder ownership — strict
+
+app/
+  Route files and layout shells only.
+  No business logic. No provider calls. No data fetching logic.
+
+components/
+  Shared presentational UI only.
+  No data fetching. No server actions. No feature-specific logic.
+
+features/
+  Everything domain-specific for one feature.
+  Components, actions, queries, schemas, and types for that feature stay together.
+  Do not put code here that belongs to a different feature.
+
+server/integrations/<provider>/
+  All provider-specific logic for one external service.
+  Adapter, schema, mapper, types.
+  Nothing else lives here.
+
+server/services/
+  Business logic that crosses feature boundaries.
+  No UI. No route handling.
+
+lib/
+  Tiny shared utilities only: env, db client, encryption, logger.
+  No domain logic. No feature logic. No provider logic.
+
+types/
+  Shared domain TypeScript types only.
+  No implementation code.
+
+## Dependency direction — strict
+
+Never invert these rules.
+
+- lib/ depends only on platform packages and types/
+- server/ depends on lib/, types/, and provider SDKs
+- features/ may depend on components/, lib/, types/, and call server actions or API routes
+- components/ must never import from server/
+- app/ composes features/ and components/ only — no direct server imports in page files
+
+## Rules
+
+- Never place provider-specific fetch logic inside page components.
+- Never place business logic inside route handlers if it can live in a service or adapter.
+- Keep page files thin — composition only.
+- Keep feature boundaries explicit — one feature per folder.
+- Do not create new top-level folders without being asked.
+- Add code in the smallest sensible unit.
+- Avoid broad refactors unless explicitly asked.
+- Preserve readability over cleverness.
