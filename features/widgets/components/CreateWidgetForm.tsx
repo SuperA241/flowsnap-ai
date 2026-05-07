@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { createWidget } from "@/features/widgets/actions/create";
 import {
   type CreateWidgetActionResult,
+  type PlanLimit,
   type SchemaJson,
   type SchemaProperty,
 } from "@/features/widgets/schemas/create";
@@ -106,21 +107,39 @@ function ConfigField({
   );
 }
 
+const EMPTY_TIER: PlanLimit = { price_id: "", name: "", monthly_limit: 5 };
+
 export function CreateWidgetForm({
   integrationVersionId,
   integrationName,
   schemaJson,
 }: Props) {
   const [state, formAction, isPending] = useActionState(createWidget, initialState);
+  const [planLimits, setPlanLimits] = useState<PlanLimit[]>([]);
 
   const requiredFields = new Set(schemaJson.required ?? []);
   const properties = Object.entries(schemaJson.properties);
+
+  function addTier() {
+    setPlanLimits((prev) => [...prev, { ...EMPTY_TIER }]);
+  }
+
+  function removeTier(index: number) {
+    setPlanLimits((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateTier(index: number, field: keyof PlanLimit, value: string | number) {
+    setPlanLimits((prev) =>
+      prev.map((tier, i) => (i === index ? { ...tier, [field]: value } : tier))
+    );
+  }
 
   return (
     <form action={formAction} className="space-y-6">
       {/* Hidden fields passed to the action */}
       <input type="hidden" name="integrationVersionId" value={integrationVersionId} />
       <input type="hidden" name="schemaJson" value={JSON.stringify(schemaJson)} />
+      <input type="hidden" name="planLimits" value={JSON.stringify(planLimits)} />
 
       {/* Widget name */}
       <div className="space-y-1.5">
@@ -158,6 +177,68 @@ export function CreateWidgetForm({
           </div>
         </div>
       )}
+
+      {/* Plan limits */}
+      <div className="space-y-4 border-t pt-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Plan limits</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Optional. Add a row per Memberstack plan to limit monthly generations.
+              Leave empty for no limits.
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={addTier}>
+            + Add plan
+          </Button>
+        </div>
+
+        {planLimits.length > 0 && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-[1fr_1fr_80px_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
+              <span>Memberstack Price ID</span>
+              <span>Plan name</span>
+              <span>Monthly limit</span>
+              <span />
+            </div>
+            {planLimits.map((tier, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_80px_32px] gap-2 items-center">
+                <Input
+                  value={tier.price_id}
+                  onChange={(e) => updateTier(i, "price_id", e.target.value)}
+                  placeholder="prc_pro-abc123"
+                  className="text-xs h-8"
+                />
+                <Input
+                  value={tier.name}
+                  onChange={(e) => updateTier(i, "name", e.target.value)}
+                  placeholder="Pro"
+                  className="text-xs h-8"
+                />
+                <Input
+                  type="number"
+                  min={1}
+                  value={tier.monthly_limit}
+                  onChange={(e) => updateTier(i, "monthly_limit", parseInt(e.target.value) || 1)}
+                  className="text-xs h-8"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeTier(i)}
+                  className="text-muted-foreground hover:text-destructive text-lg leading-none"
+                  aria-label="Remove tier"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {state.fieldErrors?.planLimits && (
+          <p className="text-xs text-destructive">{state.fieldErrors.planLimits}</p>
+        )}
+      </div>
 
       {state.error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">

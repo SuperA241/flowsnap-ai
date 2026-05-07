@@ -60,10 +60,20 @@ export async function createWidget(
 
   const config = schemaJson ? parseConfigFromFormData(formData, schemaJson) : {};
 
+  // Parse plan limits from the serialised JSON hidden field
+  const planLimitsRaw = formData.get("planLimits");
+  let planLimitsParsed: unknown[] = [];
+  try {
+    planLimitsParsed = planLimitsRaw ? (JSON.parse(planLimitsRaw as string) as unknown[]) : [];
+  } catch {
+    return { error: "Invalid plan limits data." };
+  }
+
   const parsed = createWidgetSchema.safeParse({
     name: formData.get("name"),
     integrationVersionId: formData.get("integrationVersionId"),
     config,
+    planLimits: planLimitsParsed,
   });
 
   if (!parsed.success) {
@@ -73,17 +83,24 @@ export async function createWidget(
         name: fieldErrors.name?.[0],
         integrationVersionId: fieldErrors.integrationVersionId?.[0],
         config: fieldErrors.config?.[0],
+        planLimits: fieldErrors.planLimits?.[0],
       },
     };
   }
 
-  const { name, integrationVersionId, config: validatedConfig } = parsed.data;
+  const { name, integrationVersionId, config: validatedConfig, planLimits } = parsed.data;
+
+  // Merge plan_limits into config_json so everything is in one JSONB column
+  const configJson = {
+    ...validatedConfig,
+    ...(planLimits.length > 0 ? { plan_limits: planLimits } : {}),
+  };
 
   const { error } = await supabase.from("widgets").insert({
     user_id: user.id,
     integration_version_id: integrationVersionId,
     name,
-    config_json: validatedConfig,
+    config_json: configJson,
   });
 
   if (error) {
