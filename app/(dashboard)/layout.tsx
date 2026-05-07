@@ -1,4 +1,7 @@
 import { redirect } from "next/navigation";
+
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/db/server";
 
 export default async function DashboardLayout({
@@ -15,5 +18,10 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  return <>{children}</>;
+  return (
+    <SidebarProvider>
+      <AppSidebar user={{ email: user.email ?? "" }} />
+      <SidebarInset>{children}</SidebarInset>
+    </SidebarProvider>
+  );
 }

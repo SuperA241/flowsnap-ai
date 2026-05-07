@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/db/server";
+
+import { AdminSidebar } from "@/components/admin-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { isAdmin } from "@/lib/auth/is-admin";
+import { createClient } from "@/lib/db/server";
 
 export default async function AdminLayout({
   children,
@@ -20,5 +23,10 @@ export default async function AdminLayout({
     redirect("/dashboard");
   }
 
-  return <>{children}</>;
+  return (
+    <SidebarProvider>
+      <AdminSidebar user={{ email: user.email ?? "" }} />
+      <SidebarInset>{children}</SidebarInset>
+    </SidebarProvider>
+  );
 }
