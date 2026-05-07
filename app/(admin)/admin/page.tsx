@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 export default function AdminPage() {
-  return <p>Admin — placeholder</p>;
+  redirect("/admin/integrations");
 }

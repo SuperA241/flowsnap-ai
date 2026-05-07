@@ -50,7 +50,7 @@ export async function signUp(
   const { error } = await supabase.auth.signUp({
     ...fields,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/callback`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
     },
   });
 

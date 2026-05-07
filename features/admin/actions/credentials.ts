@@ -1,5 +1,7 @@
 "use server";
 
+import { isAdmin } from "@/lib/auth/is-admin";
+import { createClient } from "@/lib/db/server";
 import { storePlatformCredential } from "@/server/services/credentials";
 
 export interface CredentialActionResult {
@@ -10,11 +12,21 @@ export interface CredentialActionResult {
 /**
  * Server action: validates and upserts a platform-owned API key for an integration.
  * Called from the admin CredentialForm component.
+ * Auth is checked here explicitly — layout guards do not protect server actions.
  */
 export async function upsertPlatformCredential(
   _prev: CredentialActionResult,
   formData: FormData
 ): Promise<CredentialActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || !isAdmin(user.email ?? "")) {
+    return { error: "Unauthorized." };
+  }
+
   const integrationId = (formData.get("integrationId") as string) ?? "";
   const apiKey = (formData.get("apiKey") as string) ?? "";
 
