@@ -5,10 +5,12 @@ import { fetchWidgetByToken } from "@/features/widget-runtime/queries/widget-by-
 
 interface Props {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ mid?: string; plan?: string }>;
 }
 
-export default async function WidgetRuntimePage({ params }: Props) {
+export default async function WidgetRuntimePage({ params, searchParams }: Props) {
   const { token } = await params;
+  const { mid, plan } = await searchParams;
 
   const { widget, error } = await fetchWidgetByToken(token);
 
@@ -27,6 +29,8 @@ export default async function WidgetRuntimePage({ params }: Props) {
         token={token}
         widgetName={widget.widgetName}
         defaultPrompt={defaultPrompt}
+        mid={mid}
+        plan={plan}
       />
     );
   }
