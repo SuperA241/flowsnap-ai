@@ -1,18 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import {
+  getWidgetThemeTokens,
+  type WidgetTheme,
+} from "@/features/widget-runtime/lib/theme";
+
+const PROMPT_PLACEHOLDER =
+  "Example: Upbeat Afrobeat rhythm, clean guitar picking, light percussion. Optimistic and modern — made for a product launch.";
 
 interface Props {
   token: string;
-  widgetName: string;
   defaultPrompt?: string;
-  /** Memberstack member ID injected by the Webflow embed script. */
+  theme?: WidgetTheme;
   mid?: string;
-  /** Memberstack price ID injected by the Webflow embed script. */
   plan?: string;
 }
-
-// ---- Usage state machine ----
 
 type UsageState =
   | { status: "loading" }
@@ -36,21 +40,170 @@ interface UsageApiResponse {
   error?: string;
 }
 
-// ---- Generate state machine ----
-
 type GenerateState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "success"; audioUrl: string }
   | { status: "error"; message: string };
 
-export function SoundFxWidget({ token, widgetName, defaultPrompt, mid, plan }: Props) {
+function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function PlayIcon({ color }: { color: string }) {
+  return (
+    <svg width="10" height="12" viewBox="0 0 10 12" fill="none" aria-hidden>
+      <path d="M0 0L10 6L0 12V0Z" fill={color} />
+    </svg>
+  );
+}
+
+function PauseIcon({ color }: { color: string }) {
+  return (
+    <svg width="10" height="12" viewBox="0 0 10 12" fill="none" aria-hidden>
+      <rect x="0" y="0" width="3" height="12" fill={color} />
+      <rect x="7" y="0" width="3" height="12" fill={color} />
+    </svg>
+  );
+}
+
+interface PreviewPlayerProps {
+  audioUrl: string;
+  theme: WidgetTheme;
+  autoPlay?: boolean;
+}
+
+function PreviewPlayer({ audioUrl, theme, autoPlay }: PreviewPlayerProps) {
+  const t = getWidgetThemeTokens(theme);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const onLoaded = () => setDuration(audio.duration);
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener("loadedmetadata", onLoaded);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
+
+    if (autoPlay) {
+      audio.play().catch(() => undefined);
+    }
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", onLoaded);
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [audioUrl, autoPlay]);
+
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) audio.play().catch(() => undefined);
+    else audio.pause();
+  }, []);
+
+  const displayDuration = duration > 0 ? duration : currentTime;
+
+  return (
+    <section aria-label="Preview sound effect">
+      <p
+        style={{
+          margin: "0 0 10px 4px",
+          fontSize: "11px",
+          fontWeight: 500,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: t.textMuted,
+        }}
+      >
+        Preview FX
+      </p>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "16px",
+          padding: "14px 20px",
+          borderRadius: "20px",
+          background: t.surface,
+        }}
+      >
+        <span
+          style={{
+            fontSize: "13px",
+            fontWeight: 400,
+            color: t.text,
+            fontVariantNumeric: "tabular-nums",
+            letterSpacing: "0.02em",
+          }}
+        >
+          {formatTime(currentTime)} / {formatTime(displayDuration)}
+        </span>
+        <button
+          type="button"
+          onClick={togglePlay}
+          aria-label={isPlaying ? "Pause preview" : "Play preview"}
+          style={{
+            flexShrink: 0,
+            width: "36px",
+            height: "36px",
+            borderRadius: "50%",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            background: t.playButtonBg,
+            padding: 0,
+          }}
+        >
+          {isPlaying ? (
+            <PauseIcon color={t.playButtonIcon} />
+          ) : (
+            <PlayIcon color={t.playButtonIcon} />
+          )}
+        </button>
+      </div>
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+    </section>
+  );
+}
+
+export function SoundFxWidget({
+  token,
+  defaultPrompt,
+  theme = "light",
+  mid,
+  plan,
+}: Props) {
+  const t = getWidgetThemeTokens(theme);
   const [prompt, setPrompt] = useState(defaultPrompt ?? "");
   const [generateState, setGenerateState] = useState<GenerateState>({ status: "idle" });
   const [usageState, setUsageState] = useState<UsageState>({ status: "loading" });
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [autoPlayPreview, setAutoPlayPreview] = useState(false);
 
-  // ---- Fetch usage on mount ----
   useEffect(() => {
     const params = new URLSearchParams();
     if (mid) params.set("mid", mid);
@@ -60,7 +213,6 @@ export function SoundFxWidget({ token, widgetName, defaultPrompt, mid, plan }: P
       .then((r) => r.json() as Promise<UsageApiResponse>)
       .then((data) => {
         if (data.error) {
-          // Fail open — don't block the user on a usage fetch error
           setUsageState({ status: "unlimited" });
           return;
         }
@@ -81,12 +233,10 @@ export function SoundFxWidget({ token, widgetName, defaultPrompt, mid, plan }: P
         });
       })
       .catch(() => {
-        // Fail open
         setUsageState({ status: "unlimited" });
       });
   }, [token, mid, plan]);
 
-  // ---- Generate handler ----
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
 
@@ -108,7 +258,6 @@ export function SoundFxWidget({ token, widgetName, defaultPrompt, mid, plan }: P
         const message = "error" in json ? json.error : `Request failed (${res.status})`;
         setGenerateState({ status: "error", message });
 
-        // If the server returned 429/blocked, refresh usage state to reflect new limit
         if (res.status === 429 || res.status === 401 || res.status === 403) {
           setUsageState({ status: "blocked", reason: message });
         }
@@ -116,9 +265,8 @@ export function SoundFxWidget({ token, widgetName, defaultPrompt, mid, plan }: P
       }
 
       setGenerateState({ status: "success", audioUrl: json.audioUrl });
-      setTimeout(() => audioRef.current?.play(), 50);
+      setAutoPlayPreview(true);
 
-      // Optimistically update counter
       setUsageState((prev) => {
         if (prev.status !== "active") return prev;
         const newCount = prev.count + 1;
@@ -141,128 +289,143 @@ export function SoundFxWidget({ token, widgetName, defaultPrompt, mid, plan }: P
   const isUsageLoading = usageState.status === "loading";
   const canGenerate = !isLoading && !isBlocked && !isUsageLoading && !!prompt.trim();
 
+  const usageLabel =
+    usageState.status === "active"
+      ? `${usageState.count} generated · ${usageState.remaining} left`
+      : null;
+
   return (
     <div
       style={{
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontFamily:
+          'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         display: "flex",
         flexDirection: "column",
-        gap: "12px",
-        padding: "16px",
-        boxSizing: "border-box",
+        gap: "20px",
         width: "100%",
+        boxSizing: "border-box",
+        background: "transparent",
       }}
     >
-      {/* Header row: name + usage counter */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-        <p
-          style={{
-            margin: 0,
-            fontSize: "13px",
-            fontWeight: 600,
-            color: "#111827",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {widgetName}
-        </p>
-
-        {/* Usage pill — only shown when a plan limit is active */}
-        {usageState.status === "active" && (
-          <span
-            style={{
-              flexShrink: 0,
-              fontSize: "11px",
-              color: usageState.remaining <= 1 ? "#b45309" : "#6b7280",
-              background: usageState.remaining <= 1 ? "#fef3c7" : "#f3f4f6",
-              borderRadius: "999px",
-              padding: "2px 8px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {usageState.count} generated · {usageState.remaining} left
-          </span>
-        )}
-      </div>
-
-      {/* Blocked state */}
+      <style>{`.fw-sfx-prompt::placeholder { color: ${t.textPlaceholder}; opacity: 1; }`}</style>
       {isBlocked ? (
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "8px",
-            padding: "10px 12px",
-            borderRadius: "8px",
-            background: "#f9fafb",
-            border: "1px solid #e5e7eb",
+            gap: "12px",
+            padding: "24px 28px",
+            borderRadius: "24px",
+            background: t.surface,
           }}
         >
-          <span style={{ fontSize: "16px", lineHeight: 1 }}>🔒</span>
-          <p style={{ margin: 0, fontSize: "12px", color: "#6b7280", lineHeight: 1.4 }}>
+          <span style={{ fontSize: "18px", lineHeight: 1, color: t.blockedIcon }} aria-hidden>
+            🔒
+          </span>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "14px",
+              lineHeight: 1.5,
+              color: t.textMuted,
+            }}
+          >
             {usageState.reason}
           </p>
         </div>
       ) : (
-        <form
-          onSubmit={handleGenerate}
-          style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}
-        >
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your sound effect…"
-            rows={2}
-            disabled={isLoading || isUsageLoading}
+        <form onSubmit={handleGenerate}>
+          <div
             style={{
-              flex: 1,
-              resize: "none",
-              fontSize: "13px",
-              padding: "8px 10px",
-              borderRadius: "6px",
-              border: "1px solid #d1d5db",
-              outline: "none",
-              fontFamily: "inherit",
-              color: "#111827",
-              background: isLoading || isUsageLoading ? "#f9fafb" : "#fff",
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!canGenerate}
-            style={{
-              flexShrink: 0,
-              padding: "8px 14px",
-              fontSize: "13px",
-              fontWeight: 500,
-              borderRadius: "6px",
-              border: "none",
-              cursor: canGenerate ? "pointer" : "not-allowed",
-              background: canGenerate ? "#111827" : "#e5e7eb",
-              color: canGenerate ? "#fff" : "#9ca3af",
-              transition: "background 0.15s",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              padding: "28px",
+              borderRadius: "24px",
+              background: t.surface,
             }}
           >
-            {isLoading ? "Generating…" : "Generate"}
-          </button>
+            <textarea
+              className="fw-sfx-prompt"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder={PROMPT_PLACEHOLDER}
+              rows={5}
+              disabled={isLoading || isUsageLoading}
+              style={{
+                width: "100%",
+                minHeight: "120px",
+                resize: "none",
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                fontSize: "15px",
+                lineHeight: 1.55,
+                fontFamily: "inherit",
+                color: t.text,
+                boxSizing: "border-box",
+              }}
+            />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
+                flexWrap: "wrap",
+              }}
+            >
+              {usageLabel ? (
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 500,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: t.textMuted,
+                  }}
+                >
+                  {usageLabel}
+                </span>
+              ) : (
+                <span />
+              )}
+              <button
+                type="submit"
+                disabled={!canGenerate}
+                style={{
+                  flexShrink: 0,
+                  padding: "12px 28px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  borderRadius: "999px",
+                  border: "none",
+                  cursor: canGenerate ? "pointer" : "not-allowed",
+                  background: canGenerate ? t.buttonBg : t.buttonDisabledBg,
+                  color: canGenerate ? t.buttonText : t.buttonDisabledText,
+                  transition: "opacity 0.15s",
+                }}
+              >
+                {isLoading ? "Generating…" : "Generate"}
+              </button>
+            </div>
+          </div>
         </form>
       )}
 
-      {generateState.status === "success" && (
-        <audio
-          ref={audioRef}
-          controls
-          src={generateState.audioUrl}
-          style={{ width: "100%", height: "36px" }}
-        />
+      {generateState.status === "error" && !isBlocked && (
+        <p style={{ margin: 0, fontSize: "13px", color: t.error }}>{generateState.message}</p>
       )}
 
-      {generateState.status === "error" && !isBlocked && (
-        <p style={{ margin: 0, fontSize: "12px", color: "#dc2626" }}>
-          {generateState.message}
-        </p>
+      {generateState.status === "success" && (
+        <PreviewPlayer
+          key={generateState.audioUrl}
+          audioUrl={generateState.audioUrl}
+          theme={theme}
+          autoPlay={autoPlayPreview}
+        />
       )}
     </div>
   );

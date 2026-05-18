@@ -1,16 +1,18 @@
 import { notFound } from "next/navigation";
 
 import { SoundFxWidget } from "@/features/widget-runtime/components/SoundFxWidget";
+import { parseWidgetTheme } from "@/features/widget-runtime/lib/theme";
 import { fetchWidgetByToken } from "@/features/widget-runtime/queries/widget-by-token";
 
 interface Props {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ mid?: string; plan?: string }>;
+  searchParams: Promise<{ mid?: string; plan?: string; theme?: string }>;
 }
 
 export default async function WidgetRuntimePage({ params, searchParams }: Props) {
   const { token } = await params;
-  const { mid, plan } = await searchParams;
+  const { mid, plan, theme: themeParam } = await searchParams;
+  const theme = parseWidgetTheme(themeParam);
 
   const { widget, error } = await fetchWidgetByToken(token);
 
@@ -27,8 +29,8 @@ export default async function WidgetRuntimePage({ params, searchParams }: Props)
     return (
       <SoundFxWidget
         token={token}
-        widgetName={widget.widgetName}
         defaultPrompt={defaultPrompt}
+        theme={theme}
         mid={mid}
         plan={plan}
       />

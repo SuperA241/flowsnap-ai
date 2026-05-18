@@ -16,7 +16,7 @@ const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 function buildIframeSnippet(token: string): string {
-  return `<iframe src="${APP_URL}/w/${token}" width="100%" height="220" frameborder="0" allowtransparency="true"></iframe>`;
+  return `<iframe src="${APP_URL}/w/${token}?theme=light" width="100%" height="420" frameborder="0" allowtransparency="true" style="background:transparent;"></iframe>`;
 }
 
 interface Props {

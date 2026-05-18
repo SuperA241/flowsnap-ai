@@ -4,5 +4,16 @@ export default function WidgetLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      <style>{`
+        html, body {
+          margin: 0;
+          padding: 0;
+          background: transparent;
+        }
+      `}</style>
+      {children}
+    </>
+  );
 }
