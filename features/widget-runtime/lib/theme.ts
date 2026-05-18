@@ -13,6 +13,9 @@ export interface WidgetThemeTokens {
   buttonDisabledText: string;
   playButtonBg: string;
   playButtonIcon: string;
+  progressTrack: string;
+  progressFill: string;
+  iconButtonBorder: string;
   error: string;
   blockedIcon: string;
 }
@@ -30,6 +33,9 @@ const LIGHT: WidgetThemeTokens = {
   buttonDisabledText: "#737373",
   playButtonBg: "#0A0A0A",
   playButtonIcon: "#FAF9F6",
+  progressTrack: "#E0DFDB",
+  progressFill: "#0A0A0A",
+  iconButtonBorder: "rgba(10, 10, 10, 0.12)",
   error: "#DC2626",
   blockedIcon: "#0A0A0A",
 };
@@ -47,6 +53,9 @@ const DARK: WidgetThemeTokens = {
   buttonDisabledText: "#737373",
   playButtonBg: "#FAF9F6",
   playButtonIcon: "#0A0A0A",
+  progressTrack: "#404040",
+  progressFill: "#FAF9F6",
+  iconButtonBorder: "rgba(250, 249, 246, 0.2)",
   error: "#F87171",
   blockedIcon: "#FAF9F6",
 };
